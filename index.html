@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planifbulles — planifications d'activités, préscolaire et primaire</title>
+<style>
+  :root{
+    --bg:#f7f9fc; --card:#fff; --ink:#1f2d3d; --muted:#63728a; --line:#e3e9f2;
+    --ok:#2f9e6e; --warn:#e0a13a; --bad:#d9534f;
+    --p0:#f0806c; --n1:#4fc3a1; --n2:#5aa9e6; --n3:#8b7fd4;
+    --n4:#f2a65a; --n5:#e9788e; --n6:#6fb98f;
+    --shadow:0 6px 20px rgba(31,45,61,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 18px 80px;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.55}
+  .wrap{max-width:1020px;margin:0 auto}
+  .mark{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:20px 0 4px;flex-wrap:wrap}
+  .mark h1{font-size:clamp(1.15rem,2.6vw,1.5rem);margin:0;letter-spacing:-.3px}
+  .mark p{margin:2px 0 0;color:var(--muted);font-size:.85rem}
+  #qui{font-size:.85rem;color:var(--muted)}
+  #qui strong{color:var(--ink)}
+
+  .onglets{display:flex;gap:6px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin:14px 0 24px}
+  .onglet{border:none;background:none;font:inherit;font-size:.95rem;padding:10px 16px;cursor:pointer;
+    color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:8px 8px 0 0}
+  .onglet:hover{background:#eef3fa;color:var(--ink)}
+  .onglet[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+  .vue[hidden]{display:none}
+
+  .bubbles{display:flex;flex-wrap:wrap;justify-content:center;gap:18px}
+  .bulle{--c:var(--n2);position:relative;border:none;cursor:pointer;
+    width:168px;height:168px;border-radius:50%;background:var(--c);color:#fff;font:inherit;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    padding:14px;text-align:center;box-shadow:var(--shadow);outline:3px solid transparent;outline-offset:4px;
+    transition:transform .18s ease,box-shadow .18s ease}
+  .bulle:hover{transform:translateY(-5px) scale(1.03)}
+  .bulle:focus-visible{outline-color:var(--ink)}
+  .bulle[aria-pressed="true"]{box-shadow:0 10px 26px rgba(31,45,61,.22)}
+  .bulle .niv{font-size:.75rem;text-transform:uppercase;letter-spacing:1px;opacity:.92}
+  .bulle .court{font-size:1.1rem;font-weight:700;line-height:1.15}
+  .bulle .age{font-size:.76rem;opacity:.9}
+  .bulle::after{content:"";position:absolute;inset:-13px;border-radius:50%;border:2px dashed rgba(255,255,255,.5)}
+
+  #panneau{margin-top:32px}
+  .vide{text-align:center;color:var(--muted);background:var(--card);border:1px dashed var(--line);
+    border-radius:18px;padding:34px 22px}
+  .entete{background:var(--card);border-radius:18px;padding:18px 22px;box-shadow:var(--shadow);
+    border-left:8px solid var(--c);margin-bottom:16px}
+  .entete h2{margin:0 0 4px;font-size:1.2rem}
+  .entete p{margin:0;color:var(--muted);font-size:.9rem}
+  .grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+  .activite{background:var(--card);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);border-top:4px solid var(--c)}
+  .activite h3{margin:0 0 8px;font-size:1.02rem;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .duree{font-size:.74rem;font-weight:500;color:var(--muted);background:var(--bg);border-radius:999px;padding:2px 9px}
+  .src{font-size:.72rem;color:var(--muted);background:#eef3fa;border-radius:999px;padding:2px 9px}
+  dl{margin:0} dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:10px}
+  dd{margin:2px 0 0;font-size:.91rem} ul{margin:4px 0 0;padding-left:19px;font-size:.91rem} li{margin-bottom:3px}
+
+  .carte{background:var(--card);border-radius:16px;padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+  .carte h2{margin:0 0 6px;font-size:1.1rem}
+  .carte > p.aide{margin:0 0 16px;color:var(--muted);font-size:.88rem}
+  label{display:block;font-size:.8rem;font-weight:600;margin:12px 0 4px}
+  input,select,textarea{width:100%;font:inherit;font-size:.92rem;padding:9px 11px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink)}
+  textarea{min-height:96px;resize:vertical}
+  .rangee{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+  .btn{font:inherit;font-size:.92rem;font-weight:600;border:none;border-radius:10px;padding:10px 18px;
+    cursor:pointer;background:var(--ink);color:#fff}
+  .btn:hover{opacity:.9}
+  .btn.clair{background:#eef3fa;color:var(--ink)}
+  .btn.ok{background:var(--ok)} .btn.bad{background:var(--bad)}
+  .btn.petit{padding:6px 12px;font-size:.82rem}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+  .msg{border-radius:12px;padding:12px 15px;font-size:.88rem;margin-top:14px}
+  .msg.ok{background:#e7f6ef;color:#1c6b4a;border:1px solid #bde5d2}
+  .msg.err{background:#fdeceb;color:#8f2f2c;border:1px solid #f5c9c7}
+  .msg.info{background:#eef3fa;color:#334b70;border:1px solid #d5e2f3}
+
+  table{width:100%;border-collapse:collapse;font-size:.87rem}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.72rem;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+  .etat{font-size:.75rem;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap;display:inline-block}
+  .etat.attente{background:#fdf3e2;color:#8a5d12}
+  .etat.validee{background:#e7f6ef;color:#1c6b4a}
+  .etat.refusee{background:#fdeceb;color:#8f2f2c}
+  .fiche{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;background:#fcfdff}
+  .fiche h3{margin:0 0 6px;font-size:1rem}
+  .fiche .meta{font-size:.79rem;color:var(--muted);margin-bottom:8px}
+  .fiche details{margin-top:10px}
+  .fiche summary{cursor:pointer;font-size:.85rem;font-weight:600;color:#334b70}
+  pre{white-space:pre-wrap;font:inherit;font-size:.86rem;background:var(--bg);border-radius:10px;padding:12px;margin:8px 0 0}
+  .barre{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.85rem;color:var(--muted);margin-bottom:14px}
+  .compteur{background:#eef3fa;border-radius:999px;padding:4px 12px;font-size:.78rem;font-weight:600;color:#334b70}
+  footer{max-width:1020px;margin:34px auto 0;text-align:center;color:var(--muted);font-size:.82rem}
+  .filtres{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .filtres select{width:auto;min-width:150px}
+  .avert{font-size:.82rem;color:#8a5d12;background:#fdf3e2;border:1px solid #f0dcb4;border-radius:12px;padding:11px 14px;margin:0 0 14px}
+  @media print{
+    body{background:#fff;padding:0}
+    .mark,#qui,.onglets,.bubbles,.vide,.carte,.actions,footer,.filtres{display:none !important}
+    .activite{box-shadow:none;border:1px solid var(--line)}
+    .entete{box-shadow:none;border:1px solid var(--line);border-left:8px solid var(--c)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark">
+    <div>
+      <h1>Planifbulles <span style="font-weight:400;opacity:.65">·</span> un niveau, une bulle</h1>
+      <p>Planifications d'activités pour le préscolaire et le primaire — à consulter, enrichir et valider.</p>
+    </div>
+    <div id="qui">Chargement…</div>
+  </div>
+
+  <div class="onglets" role="tablist">
+    <button class="onglet" role="tab" aria-selected="true" data-vue="activites">Activités</button>
+    <button class="onglet" role="tab" aria-selected="false" data-vue="importer">Importer une planification</button>
+    <button class="onglet" role="tab" aria-selected="false" data-vue="moderation">Espace modérateur</button>
+  </div>
+
+  <!-- VUE ACTIVITES -->
+  <section class="vue" id="vue-activites">
+    <div class="bubbles" id="bulles" aria-label="Choisir un niveau"></div>
+    <div id="panneau" aria-live="polite">
+      <div class="vide">Aucun niveau sélectionné — choisis une bulle ci-dessus pour voir les planifications.</div>
+    </div>
+  </section>
+
+  <!-- VUE IMPORT -->
+  <section class="vue" id="vue-importer" hidden>
+    <div class="carte">
+      <h2>Importer une planification</h2>
+      <p class="aide">Remplis la fiche ci-dessous. Elle sera envoyée à la file de modération : un modérateur la vérifie
+        avant qu'elle apparaisse dans les bulles de niveau. Chaque proposition est conservée dans ce navigateur et,
+        si le serveur est configuré, transmise aux modérateurs.</p>
+      <div class="rangee">
+        <div>
+          <label for="f-niveau">Niveau scolaire</label>
+          <select id="f-niveau"></select>
+        </div>
+        <div>
+          <label for="f-duree">Durée</label>
+          <input id="f-duree" placeholder="ex. 30 min">
+        </div>
+      </div>
+      <label for="f-titre">Titre de l'activité</label>
+      <input id="f-titre" placeholder="ex. La chasse aux sons du jour">
+      <label for="f-intention">Intention pédagogique</label>
+      <textarea id="f-intention" placeholder="Ce que l'élève doit apprendre ou développer…"></textarea>
+      <label for="f-materiel">Matériel (un élément par ligne)</label>
+      <textarea id="f-materiel" placeholder="Cartes-images&#10;Tableau&#10;Jetons"></textarea>
+      <label for="f-deroulement">Déroulement (une étape par ligne)</label>
+      <textarea id="f-deroulement" placeholder="Étape 1…&#10;Étape 2…&#10;Étape 3…"></textarea>
+      <div class="rangee">
+        <div>
+          <label for="f-traces">Traces à conserver</label>
+          <input id="f-traces" placeholder="ex. Affiche collective + feuille individuelle">
+        </div>
+        <div>
+          <label for="f-observation">Observation / évaluation</label>
+          <input id="f-observation" placeholder="ex. Repérer les confusions de sons">
+        </div>
+      </div>
+      <div class="rangee">
+        <div>
+          <label for="f-autrice">Ton nom</label>
+          <input id="f-autrice" placeholder="ex. Marie Tremblay" autocomplete="name">
+        </div>
+        <div>
+          <label for="f-courriel">Ton courriel (facultatif)</label>
+          <input id="f-courriel" type="email" placeholder="nom@ecole.ca" autocomplete="email">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="envoyer">Envoyer à la modération</button>
+        <button class="btn clair" id="exemple">Remplir un exemple</button>
+      </div>
+      <div id="retour-import"></div>
+    </div>
+    <div class="carte">
+      <h2>Ma file d'attente</h2>
+      <p class="aide">Les planifications que tu as proposées depuis ce navigateur et leur état.</p>
+      <div id="mes-envois"></div>
+    </div>
+  </section>
+
+  <!-- VUE MODERATION -->
+  <section class="vue" id="vue-moderation" hidden>
+    <div class="carte" id="bloc-connexion">
+      <h2>Connexion modérateur</h2>
+      <p class="aide">L'accès à la validation se fait sur invitation. Entre le code reçu des responsables de la page.</p>
+      <label for="mod-code">Code modérateur</label>
+      <input id="mod-code" type="password" placeholder="••••••••" autocomplete="off">
+      <label for="mod-nom">Ton nom affiché</label>
+      <input id="mod-nom" placeholder="ex. Direction — école des Érables">
+      <div class="actions">
+        <button class="btn" id="mod-entrer">Entrer</button>
+      </div>
+      <div id="retour-connexion"></div>
+    </div>
+
+    <div class="carte" id="bloc-moderation" hidden>
+      <h2>Planifications en attente</h2>
+      <p class="aide">Vérifie chaque fiche, puis valide-la pour qu'elle rejoigne la page, ou refuse-la avec un motif.</p>
+      <div class="barre">
+        <span class="compteur" id="compteur">0 en attente</span>
+        <span id="mod-identite"></span>
+        <button class="btn clair petit" id="mod-sortir" style="margin-left:auto">Quitter la modération</button>
+      </div>
+      <div class="filtres">
+        <select id="mod-filtre">
+          <option value="attente">En attente</option>
+          <option value="validee">Validées</option>
+          <option value="refusee">Refusées</option>
+          <option value="tout">Tout</option>
+        </select>
+        <button class="btn clair petit" id="mod-export">Exporter le catalogue (JSON)</button>
+        <label for="mod-import-json" style="margin:0;font-size:.82rem;font-weight:600">Importer un catalogue JSON</label>
+        <input id="mod-import-json" type="file" accept=".json,application/json" style="width:auto;padding:6px">
+      </div>
+      <div id="liste-mod"></div>
+    </div>
+  </section>
+
+  <footer>Planifbulles — les planifications sont des modèles à adapter aux contenus du programme de votre province ou territoire.</footer>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIGURATION DU SERVEUR — voir le texte d'accompagnement
+   Si API est renseigné, les propositions partent vers un vrai serveur
+   et les modérateurs de tous les navigateurs voient la même file.
+   Sinon, la page fonctionne en mode local (même appareil).
+   ===================================================================== */
+const API = ""; // ex. "https://mon-projet.vercel.app/api"
+/* ============ Fin de la configuration ============ */
+
+const MOD_CODE = "primaire2026"; // à changer par les responsables avant publication
+const CACHE_OK = "primaire:catalogue:v1";
+const CACHE_SOUMIS = "primaire:soumis:v1";
+const CACHE_SESSION = "primaire:session:v1";
+
+const NIVEAUX = [
+  {
+    id:"PS", couleur:"var(--p0)", niv:"Préscolaire", court:"4 et 5 ans", age:"Maternelle 4 et 5 ans",
+    resume:"Jeu, motricité, langage oral et premiers repères : la maternelle apprend en jouant.",
+    activites:[
+      { titre:"Le sac mystère du langage", duree:"25 min",
+        intention:"Nommer, décrire et raconter à partir d'un objet caché.",
+        materiel:["Un sac en tissu","Objets variés du quotidien","Un coussin par enfant"],
+        deroulement:["Les enfants sont assis en cercle sur leur coussin.",
+          "Un enfant tire un objet du sac sans le montrer et le décrit : sa forme, sa texture, à quoi il sert.",
+          "Les autres devinent l'objet ; l'enfant le montre pour valider.",
+          "Chaque enfant raconte ensuite une phrase sur cet objet : « Chez moi, il y a… »."],
+        traces:"Dictée à l'adulte : l'enseignante note les phrases sur une grande feuille affichée.",
+        observation:"Repérer les enfants qui passent du mot isolé à la phrase complète." },
+      { titre:"Parcours de motricité : sauter, ramper, lancer", duree:"40 min",
+        intention:"Développer l'équilibre, la coordination et le contrôle du geste global.",
+        materiel:["Cercles et cônes","Grand tapis","Ballons mous","Banc bas"],
+        deroulement:["Installer trois ateliers en circuit : sauter dans les cercles, ramper sous le banc, lancer dans la cible.",
+          "Montrer chaque atelier et faire une démonstration lente.",
+          "Les enfants passent en petits groupes de quatre, un atelier à la fois.",
+          "Augmenter progressivement la distance des cercles et de la cible."],
+        traces:"Photo du parcours et dessin individuel de l'atelier préféré.",
+        observation:"Observer l'équilibre et la réception du saut." },
+      { titre:"Peinture à dix doigts", duree:"35 min",
+        intention:"Explorer la couleur, la trace et la texture par le geste.",
+        materiel:["Grandes feuilles","Peinture lavable en trois couleurs","Tabliers","Bassines d'eau"],
+        deroulement:["Présenter les trois couleurs et demander ce que l'on peut faire avec ses mains.",
+          "Chaque enfant trace librement avec les paumes, puis avec un seul doigt.",
+          "Poser une question ouverte : « Que se passe-t-il quand les couleurs se touchent ? »",
+          "Faire nommer ce qu'on voit sur son œuvre avant de l'accrocher."],
+        traces:"Œuvres accrochées au mur avec le prénom, plus une phrase dictée.",
+        observation:"Noter le vocabulaire de couleur et de texture employé." },
+      { titre:"Comptines et rythmes du matin", duree:"20 min",
+        intention:"Développer la conscience phonologique et le rythme par le jeu vocal.",
+        materiel:["Aucun","Maracas ou bouchons sonores"],
+        deroulement:["Dire la comptine une fois lentement, en articulant.",
+          "La reprendre en frappant le rythme dans les mains.",
+          "Faire répéter une syllabe à la fois, puis le vers entier.",
+          "Un enfant propose un geste pour chaque mot-clé ; on refait la comptine avec les gestes."],
+        traces:"Aucune trace écrite — apprentissage oral réinvesti chaque matin.",
+        observation:"Repérer les enfants qui découpent les syllabes correctement." }
+    ]
+  },
+  {
+    id:"1re", couleur:"var(--n1)", niv:"Primaire", court:"1re année", age:"6 à 7 ans",
+    resume:"Lecture, dénombrement et premiers repères dans le temps et l'espace.",
+    activites:[
+      { titre:"La chasse aux sons du jour", duree:"30 min",
+        intention:"Reconnaître à l'oral et à l'écrit le son étudié en classe.",
+        materiel:["Cartes-images (12 à 15)","Tableau","Jetons"],
+        deroulement:["Nommer le son de la semaine devant le groupe.",
+          "Présenter chaque carte-image : on lève la main si le mot contient le son.",
+          "Classer les cartes dans deux colonnes : « on entend » / « on n'entend pas ».",
+          "Chaque élève écrit trois mots trouvés sur sa feuille."],
+        traces:"Affiche collective + feuille individuelle de trois mots.",
+        observation:"Repérer les élèves qui confondent deux sons proches." },
+      { titre:"Compter en bougeant jusqu'à 20", duree:"25 min",
+        intention:"Dénombrer une collection de 20 objets et l'associer au nombre écrit.",
+        materiel:["Bouchons ou jetons","Dés","Ardoises effaçables"],
+        deroulement:["Chaque élève prend une poignée de jetons sans les compter.",
+          "Il les place un à un en disant le nombre à voix haute.",
+          "Il écrit le nombre atteint sur son ardoise et le compare avec un voisin.",
+          "Défi collectif : former des groupes de 5 et compter par bonds de cinq."],
+        traces:"Ardoise recopiée dans le cahier de mathématiques.",
+        observation:"Vérifier la correspondance un objet = un mot-nombre." },
+      { titre:"Mon corps dans l'espace", duree:"30 min",
+        intention:"Employer le vocabulaire de position (devant, derrière, à gauche, à droite).",
+        materiel:["Ruban adhésif","Objet repère","Musique douce"],
+        deroulement:["Tracer un carré au sol et placer l'objet repère au centre.",
+          "Annoncer une position : les élèves se déplacent en conséquence.",
+          "En duos, un élève donne la consigne et l'autre l'exécute.",
+          "Retour au calme : chacun nomme sa position par rapport au repère."],
+        traces:"Dessin individuel montrant l'objet et l'élève à une position donnée.",
+        observation:"Noter les prépositions encore difficiles à employer." }
+    ]
+  },
+  {
+    id:"2e", couleur:"var(--n2)", niv:"Primaire", court:"2e année", age:"7 à 8 ans",
+    resume:"Phrases complètes, additions, premiers projets de groupe.",
+    activites:[
+      { titre:"Le petit journal de la classe", duree:"45 min (2 périodes)",
+        intention:"Écrire une phrase complète et la relire pour la rendre compréhensible.",
+        materiel:["Grandes feuilles","Crayons","Colle et ciseaux"],
+        deroulement:["Choisir un sujet vécu par la classe (sortie, expérience, événement).",
+          "Écrire collectivement une phrase au tableau, puis vérifier majuscule et point.",
+          "Chaque élève rédige sa phrase et l'illustre.",
+          "Assembler les pages pour former le journal de la semaine, affiché dans le corridor."],
+        traces:"Page du journal + phrase recopiée au cahier d'écriture.",
+        observation:"Observer la construction de la phrase (sujet, verbe, complément)." },
+      { titre:"Boutique de classe", duree:"40 min",
+        intention:"Additionner de petits montants et rendre la monnaie.",
+        materiel:["Fausse monnaie","Objets étiquetés","Caisse en carton"],
+        deroulement:["Installer trois objets à 5, 10 et 15 cents sur la table-boutique.",
+          "Deux élèves jouent tour à tour le client et le commerçant.",
+          "Le client paie exactement, puis vérifie avec sa monnaie.",
+          "Varier les rôles et ajouter un rabais de 5 cents à la fin."],
+        traces:"Calculs écrits dans le cahier + photo de la boutique.",
+        observation:"Repérer les erreurs de retenue dans l'addition." },
+      { titre:"Les familles d'animaux", duree:"35 min",
+        intention:"Classer des êtres vivants selon des critères observables.",
+        materiel:["Images d'animaux","Grandes feuilles","Ruban-cache"],
+        deroulement:["Distribuer un jeu d'images par équipe de quatre.",
+          "Chaque équipe propose deux critères de classement et les justifie.",
+          "Faire circuler les jeux pour que les autres équipes classent à leur tour.",
+          "Mise en commun : nommer et comparer les critères retenus."],
+        traces:"Affiche de classement par équipe.",
+        observation:"Vérifier que le critère reste constant dans tout le classement." }
+    ]
+  },
+  {
+    id:"3e", couleur:"var(--n3)", niv:"Primaire", court:"3e année", age:"8 à 9 ans",
+    resume:"Compréhension de lecture, multiplication, premières démarches d'enquête.",
+    activites:[
+      { titre:"Cercle de lecture en rôles", duree:"45 min",
+        intention:"Comprendre un texte narratif en s'attribuant un rôle de lecteur.",
+        materiel:["Album jeunesse","Fiches de rôle","Marque-pages"],
+        deroulement:["Lire l'album à voix haute en deux temps.",
+          "Attribuer un rôle par élève : résumeur, questionneur, mot-clé, illustrateur.",
+          "En cercle, chacun présente sa contribution à partir de sa fiche.",
+          "Conclure par une question ouverte débattue en grand groupe."],
+        traces:"Fiches de rôle conservées dans le carnet de lecture.",
+        observation:"Évaluer la capacité à justifier une réponse avec le texte." },
+      { titre:"La table de multiplication en jeu", duree:"30 min",
+        intention:"Mémoriser les tables de 2, 5 et 10 par le jeu.",
+        materiel:["Cartes de multiplication","Chronomètre","Tableau de suivi"],
+        deroulement:["Former des duos avec un paquet de cartes par équipe.",
+          "L'élève A montre la carte, l'élève B répond dans les cinq secondes.",
+          "Échanger les rôles après dix cartes.",
+          "Inscrire le score au tableau de suivi pour voir la progression de la semaine."],
+        traces:"Tableau de suivi collectif des scores.",
+        observation:"Repérer les faits numériques encore hésitants." },
+      { titre:"Enquête : d'où vient l'eau du robinet ?", duree:"50 min (2 périodes)",
+        intention:"Formuler une question de recherche et présenter ses résultats.",
+        materiel:["Grandes feuilles","Documents ou images","Carte du territoire"],
+        deroulement:["Noter au tableau toutes les questions des élèves sur l'eau.",
+          "Regrouper les questions par thème et choisir deux questions à explorer.",
+          "En équipes, chercher des éléments de réponse dans les documents fournis.",
+          "Chaque équipe présente sa réponse en trois phrases."],
+        traces:"Affiche de recherche par équipe + synthèse collective.",
+        observation:"Vérifier la distinction entre une question et une affirmation." }
+    ]
+  },
+  {
+    id:"4e", couleur:"var(--n4)", niv:"Primaire", court:"4e année", age:"9 à 10 ans",
+    resume:"Textes plus longs, fractions, sciences et projets interdisciplinaires.",
+    activites:[
+      { titre:"Débat encadré : pour ou contre les zoos", duree:"50 min",
+        intention:"Développer un point de vue appuyé sur deux arguments.",
+        materiel:["Fiches d'arguments","Cartons « pour » / « contre »","Grille d'écoute"],
+        deroulement:["Présenter la question et laisser chacun choisir son camp.",
+          "Chaque camp prépare deux arguments avec des exemples.",
+          "Débat de dix minutes avec droit de réponse alterné.",
+          "Chaque élève écrit un argument de l'autre camp qu'il juge valable."],
+        traces:"Fiche d'arguments + note individuelle de fin de débat.",
+        observation:"Évaluer l'écoute active et la pertinence des exemples." },
+      { titre:"Fractions en pizza (et en papier)", duree:"40 min",
+        intention:"Représenter, comparer et ordonner des fractions simples.",
+        materiel:["Cercles de papier fractionnés","Ciseaux","Colle","Règles"],
+        deroulement:["Chaque élève découpe un cercle en demis, quarts et huitièmes.",
+          "Comparer deux fractions en superposant les morceaux.",
+          "Ordonner trois fractions du plus petit au plus grand.",
+          "Vérifier collectivement en écrivant le raisonnement au tableau."],
+        traces:"Feuille de fractions collée dans le cahier.",
+        observation:"Noter la confusion fréquente entre 1/4 et 1/8." },
+      { titre:"Circuit électrique simple", duree:"45 min",
+        intention:"Construire un circuit fermé et expliquer l'effet d'un interrupteur.",
+        materiel:["Piles","Fils","Ampoules","Interrupteurs","Support de montage"],
+        deroulement:["Présenter le matériel et les règles de sécurité.",
+          "En équipes, construire un circuit qui allume l'ampoule.",
+          "Ajouter un interrupteur et le placer à différents endroits.",
+          "Schématiser le montage réussi et expliquer pourquoi il fonctionne."],
+        traces:"Schéma annoté du circuit dans le cahier de sciences.",
+        observation:"Vérifier la compréhension de « circuit fermé »." }
+    ]
+  },
+  {
+    id:"5e", couleur:"var(--n5)", niv:"Primaire", court:"5e année", age:"10 à 11 ans",
+    resume:"Textes argumentatifs, nombres décimaux, recherche et communication orale.",
+    activites:[
+      { titre:"Texte d'opinion en cinq paragraphes", duree:"60 min (2 périodes)",
+        intention:"Rédiger un texte argumentatif structuré et le réviser.",
+        materiel:["Plan de rédaction","Dictionnaires","Grille de révision"],
+        deroulement:["Choisir un sujet d'actualité proche des élèves.",
+          "Remplir le plan : introduction, deux arguments, objection, conclusion.",
+          "Rédiger au brouillon, puis appliquer la grille de révision.",
+          "Recopier la version finale et la lire à un camarade."],
+        traces:"Brouillon + texte final annoté.",
+        observation:"Évaluer la présence d'un argument par paragraphe." },
+      { titre:"Marché des nombres décimaux", duree:"40 min",
+        intention:"Additionner et comparer des nombres décimaux en contexte monétaire.",
+        materiel:["Listes de prix","Calculatrices","Feuilles de calcul"],
+        deroulement:["Remettre à chaque équipe une liste de prix avec décimales.",
+          "Calculer le coût de trois paniers différents.",
+          "Comparer les totaux entre équipes et justifier le classement.",
+          "Vérifier un total sur deux à la calculatrice."],
+        traces:"Feuille de calcul corrigée collectivement.",
+        observation:"Repérer les erreurs d'alignement de la virgule." },
+      { titre:"Portrait d'une région du Canada", duree:"55 min",
+        intention:"Organiser une recherche et la présenter oralement.",
+        materiel:["Cartes du Canada","Documents ou atlas","Gabarit de présentation"],
+        deroulement:["Assigner une région par équipe de deux.",
+          "Remplir le gabarit : relief, climat, ressources, population.",
+          "Préparer trois diapositives ou une affiche.",
+          "Présenter deux minutes en respectant le temps imparti."],
+        traces:"Affiche ou diaporama + note d'écoute des autres équipes.",
+        observation:"Évaluer la clarté de l'oral et le respect de la consigne." }
+    ]
+  },
+  {
+    id:"6e", couleur:"var(--n6)", niv:"Primaire", court:"6e année", age:"11 à 12 ans",
+    resume:"Projets longs, proportions et autonomie avant le secondaire.",
+    activites:[
+      { titre:"Projet d'entrepreneuriat de fin d'année", duree:"3 périodes réparties",
+        intention:"Planifier, budgéter et réaliser un projet d'équipe.",
+        materiel:["Gabarit de budget","Affiches","Matériel de fabrication"],
+        deroulement:["Former les équipes et choisir un produit ou un service.",
+          "Estimer les coûts, fixer un prix et prévoir le profit.",
+          "Réaliser un prototype ou une maquette publicitaire.",
+          "Présenter le projet devant la classe ou lors d'un événement d'école."],
+        traces:"Dossier de projet complet + présentation.",
+        observation:"Évaluer la cohérence entre le budget et le prix fixé." },
+      { titre:"Proportions en cuisine", duree:"45 min",
+        intention:"Appliquer un raisonnement proportionnel à une recette.",
+        materiel:["Recette de base","Mesures","Feuilles de calcul"],
+        deroulement:["Donner une recette pour quatre personnes.",
+          "Calculer les quantités pour six, puis pour dix personnes.",
+          "Comparer les deux démarches en grand groupe.",
+          "Vérifier la cohérence des résultats avec un tableau de proportionnalité."],
+        traces:"Tableau de proportionnalité corrigé.",
+        observation:"Observer la procédure : coefficient ou produit en croix." },
+      { titre:"Simulation d'un conseil de classe", duree:"50 min",
+        intention:"Prendre la parole dans un cadre formel et défendre une proposition.",
+        materiel:["Ordre du jour","Rôles attribués","Cartons de vote"],
+        deroulement:["Présenter l'ordre du jour et attribuer les rôles (présidence, secrétariat).",
+          "Chaque élève dépose une proposition écrite.",
+          "Débattre en respectant le temps de parole.",
+          "Voter et rédiger un compte rendu collectif."],
+        traces:"Compte rendu du conseil affiché en classe.",
+        observation:"Évaluer l'argumentation et le respect du cadre." }
+    ]
+  }
+];
+
+/* --------------------------- stockage --------------------------- */
+const lect = (c, d) => { try { const v = localStorage.getItem(c); return v ? JSON.parse(v) : d; } catch(e){ return d; } };
+const ecri = (c, v) => { try { localStorage.setItem(c, JSON.stringify(v)); } catch(e){} };
+const uid = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+let moderees = lect(CACHE_OK, []);   // fiches validées, ajoutées à la page
+let soumis  = lect(CACHE_SOUMIS, []); // fiches proposées en attente/refusées
+let session = lect(CACHE_SESSION, null);
+
+async function appelServeur(chemin, options){
+  if(!API) return null;
+  try{
+    const r = await fetch(API + chemin, Object.assign({headers:{"Content-Type":"application/json"}}, options||{}));
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+/* --------------------------- onglets --------------------------- */
+document.querySelectorAll(".onglet").forEach(o => {
+  o.addEventListener("click", () => {
+    document.querySelectorAll(".onglet").forEach(x => x.setAttribute("aria-selected","false"));
+    o.setAttribute("aria-selected","true");
+    ["activites","importer","moderation"].forEach(v => {
+      document.getElementById("vue-" + v).hidden = (v !== o.dataset.vue);
+    });
+  });
+});
+
+/* --------------------------- bulles --------------------------- */
+const bullesBox = document.getElementById("bulles");
+const panneau = document.getElementById("panneau");
+let actif = null;
+
+function activitesDuNiveau(n){
+  return n.activites.concat(moderees.filter(m => m.niveau === n.id).map(f => ({
+    titre: f.titre, duree: f.duree, intention: f.intention,
+    materiel: f.materiel, deroulement: f.deroulement,
+    traces: f.traces, observation: f.observation, source: f.autrice
+  })));
+}
+
+function dessinerBulles(){
+  bullesBox.innerHTML = "";
+  NIVEAUX.forEach(n => {
+    const b = document.createElement("button");
+    b.className = "bulle";
+    b.style.setProperty("--c", n.couleur);
+    b.setAttribute("aria-pressed", actif === n.id ? "true" : "false");
+    const nb = activitesDuNiveau(n).length;
+    b.innerHTML = `<span class="niv">${n.niv}</span>
+                   <span class="court">${n.court}</span>
+                   <span class="age">${n.age}</span>
+                   <span class="age">${nb} activités</span>`;
+    b.addEventListener("click", () => {
+      actif = (actif === n.id) ? null : n.id;
+      document.querySelectorAll(".bulle").forEach(x => x.setAttribute("aria-pressed","false"));
+      if(actif){ b.setAttribute("aria-pressed","true"); rendreNiveau(n); }
+      else { panneau.innerHTML = '<div class="vide">Aucun niveau sélectionné — choisis une bulle ci-dessus pour voir les planifications.</div>'; }
+    });
+    bullesBox.appendChild(b);
+  });
+}
+
+function rendreNiveau(n){
+  const liste = activitesDuNiveau(n);
+  let html = `<section class="entete" style="--c:${n.couleur}">
+      <h2>${n.niv} — ${n.court} (${n.age})</h2>
+      <p>${n.resume} · ${liste.length} activité${liste.length > 1 ? "s" : ""} planifiée${liste.length > 1 ? "s" : ""}.</p>
+    </section><div class="grille">`;
+  liste.forEach(a => {
+    html += `<article class="activite" style="--c:${n.couleur}">
+      <h3>${a.titre} <span class="duree">${a.duree}</span>${a.source ? `<span class="src">proposé par ${a.source}</span>` : ""}</h3>
+      <dl>
+        <dt>Intention pédagogique</dt><dd>${a.intention}</dd>
+        <dt>Matériel</dt><dd><ul>${a.materiel.map(m => `<li>${m}</li>`).join("")}</ul></dd>
+        <dt>Déroulement</dt><dd><ul>${a.deroulement.map(d => `<li>${d}</li>`).join("")}</ul></dd>
+        <dt>Traces à conserver</dt><dd>${a.traces}</dd>
+        <dt>Observation / évaluation</dt><dd>${a.observation}</dd>
+      </dl></article>`;
+  });
+  panneau.innerHTML = html + "</div>";
+  panneau.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+/* --------------------------- import --------------------------- */
+const selNiveau = document.getElementById("f-niveau");
+NIVEAUX.forEach(n => {
+  const o = document.createElement("option");
+  o.value = n.id; o.textContent = n.niv + " — " + n.court;
+  selNiveau.appendChild(o);
+});
+
+const V = id => document.getElementById(id).value.trim();
+const lignes = t => t.split("\n").map(x => x.trim()).filter(Boolean);
+
+document.getElementById("exemple").addEventListener("click", () => {
+  V;
+  document.getElementById("f-niveau").value = "PS";
+  document.getElementById("f-duree").value = "30 min";
+  document.getElementById("f-titre").value = "Jeu de rôle à l'épicerie";
+  document.getElementById("f-intention").value = "Employer le vocabulaire des aliments et compter jusqu'à cinq en jouant.";
+  document.getElementById("f-materiel").value = "Aliments en plastique\nPetits paniers\nCaisse jouet\nBillets de monnaie factice";
+  document.getElementById("f-deroulement").value =
+    "Installer l'épicerie en trois zones avec les aliments par catégories.\n" +
+    "Attribuer les rôles : clients, commerçants, livreur.\n" +
+    "Chaque client achète cinq aliments et les nomme au commerçant.\n" +
+    "Inverser les rôles pour que chaque enfant passe aux deux postes.";
+  document.getElementById("f-traces").value = "Photo de l'épicerie + liste dessinée des cinq aliments achetés.";
+  document.getElementById("f-observation").value = "Repérer l'emploi des mots-nombres et du vocabulaire alimentaire.";
+});
+
+document.getElementById("envoyer").addEventListener("click", async () => {
+  const zone = document.getElementById("retour-import");
+  const fiche = {
+    id: uid(),
+    niveau: V("f-niveau"), titre: V("f-titre"), duree: V("f-duree") || "Durée à préciser",
+    intention: V("f-intention"),
+    materiel: lignes(document.getElementById("f-materiel").value),
+    deroulement: lignes(document.getElementById("f-deroulement").value),
+    traces: V("f-traces"), observation: V("f-observation"),
+    autrice: V("f-autrice") || "Contributeur anonyme",
+    courriel: V("f-courriel"),
+    etat: "attente",
+    envoye: new Date().toISOString()
+  };
+  const manque = [];
+  if(!fiche.titre) manque.push("le titre");
+  if(!fiche.intention) manque.push("l'intention pédagogique");
+  if(fiche.deroulement.length < 3) manque.push("au moins trois étapes de déroulement");
+  if(manque.length){
+    zone.innerHTML = `<div class="msg err">Il manque ${manque.join(", ")}.</div>`;
+    return;
+  }
+  soumis.unshift(fiche);
+  ecri(CACHE_SOUMIS, soumis);
+  const rep = await appelServeur("/propositions", {method:"POST", body: JSON.stringify(fiche)});
+  zone.innerHTML = rep
+    ? '<div class="msg ok">Proposition transmise aux modérateurs. Tu la retrouves ci-dessous.</div>'
+    : '<div class="msg ok">Proposition enregistrée et placée dans la file de modération. Elle s\'affichera dans la bulle de ce niveau dès qu\'un modérateur l\'aura validée.</div>';
+  document.getElementById("f-titre").value = "";
+  document.getElementById("f-intention").value = "";
+  document.getElementById("f-materiel").value = "";
+  document.getElementById("f-deroulement").value = "";
+  document.getElementById("f-traces").value = "";
+  document.getElementById("f-observation").value = "";
+  listerMesEnvois();
+});
+
+function listerMesEnvois(){
+  const box = document.getElementById("mes-envois");
+  if(!soumis.length){ box.innerHTML = '<p class="aide" style="margin:0">Aucune proposition envoyée depuis ce navigateur.</p>'; return; }
+  const libelle = {attente:"En attente", validee:"Validée", refusee:"Refusée"};
+  const noms = {}; NIVEAUX.forEach(n => noms[n.id] = n.court);
+  let html = "<table><tr><th>Activité</th><th>Niveau</th><th>Envoyée le</th><th>État</th></tr>";
+  soumis.forEach(f => {
+    html += `<tr><td>${f.titre}${f.motif ? `<br><span class="aide">Motif : ${f.motif}</span>` : ""}</td>
+      <td>${noms[f.niveau] || f.niveau}</td>
+      <td>${new Date(f.envoye).toLocaleDateString("fr-CA")}</td>
+      <td><span class="etat ${f.etat}">${libelle[f.etat]}</span></td></tr>`;
+  });
+  box.innerHTML = html + "</table>";
+}
+
+/* --------------------------- modération --------------------------- */
+function majIdentite(){
+  const z = document.getElementById("qui");
+  if(session && session.role === "moderateur"){
+    z.innerHTML = `Connecté comme <strong>${session.nom}</strong> · <a href="#" id="lien-sortir">quitter</a>`;
+    const l = document.getElementById("lien-sortir");
+    if(l) l.addEventListener("click", e => { e.preventDefault(); session = null; ecri(CACHE_SESSION, null); majIdentite(); majModeration(); });
+  } else {
+    z.textContent = "Accès public en lecture · modération sur invitation";
+  }
+}
+
+document.getElementById("mod-entrer").addEventListener("click", async () => {
+  const zone = document.getElementById("retour-connexion");
+  const code = document.getElementById("mod-code").value.trim();
+  const nom = document.getElementById("mod-nom").value.trim() || "Modérateur";
+  const rep = await appelServeur("/moderation/connexion", {method:"POST", body: JSON.stringify({code})});
+  const autorise = rep ? rep.autorise : (code === MOD_CODE);
+  if(!autorise){ zone.innerHTML = '<div class="msg err">Code invalide. Demande l\'accès aux responsables de la page.</div>'; return; }
+  session = {role:"moderateur", nom};
+  ecri(CACHE_SESSION, session);
+  zone.innerHTML = "";
+  document.getElementById("mod-code").value = "";
+  majIdentite(); majModeration();
+});
+
+document.getElementById("mod-sortir").addEventListener("click", () => {
+  session = null; ecri(CACHE_SESSION, null); majIdentite(); majModeration();
+});
+
+document.getElementById("mod-filtre").addEventListener("change", majModeration);
+
+function majModeration(){
+  const connecte = session && session.role === "moderateur";
+  document.getElementById("bloc-connexion").hidden = connecte;
+  document.getElementById("bloc-moderation").hidden = !connecte;
+  if(!connecte) return;
+
+  document.getElementById("mod-identite").textContent = "Modérateur : " + session.nom;
+  const filtres = {attente: f => f.etat === "attente", validee: f => f.etat === "validee",
+                   refusee: f => f.etat === "refusee", tout: () => true};
+  const choix = document.getElementById("mod-filtre").value;
+  const liste = soumis.filter(filtres[choix]);
+  const enAttente = soumis.filter(f => f.etat === "attente").length;
+  document.getElementById("compteur").textContent = enAttente + " en attente";
+  const box = document.getElementById("liste-mod");
+
+  if(!liste.length){
+    box.innerHTML = '<div class="msg info">Aucune fiche dans ce filtre. Les propositions des enseignants apparaîtront ici.</div>';
+    return;
+  }
+  const noms = {}; NIVEAUX.forEach(n => noms[n.id] = n.niv + " — " + n.court);
+  box.innerHTML = liste.map(f => `
+    <div class="fiche">
+      <h3>${f.titre} <span class="duree">${f.duree}</span> <span class="etat ${f.etat}">${f.etat === "attente" ? "En attente" : f.etat === "validee" ? "Validée" : "Refusée"}</span></h3>
+      <div class="meta">${noms[f.niveau] || f.niveau} · ${f.autrice}${f.courriel ? " · " + f.courriel : ""} · reçue le ${new Date(f.envoye).toLocaleDateString("fr-CA")}</div>
+      <details><summary>Voir la planification complète</summary>
+        <pre><strong>Intention :</strong> ${f.intention}
+<strong>Matériel :</strong> ${f.materiel.join(" · ") || "—"}
+<strong>Déroulement :</strong>
+${f.deroulement.map((d,i) => (i+1) + ". " + d).join("\n")}
+<strong>Traces :</strong> ${f.traces || "—"}
+<strong>Observation :</strong> ${f.observation || "—"}</pre>
+      </details>
+      ${f.motif ? `<div class="msg err" style="margin-top:10px">Motif du refus : ${f.motif}</div>` : ""}
+      <div class="actions">
+        ${f.etat !== "validee" ? `<button class="btn ok petit" data-valider="${f.id}">Valider et publier</button>` : ""}
+        ${f.etat !== "refusee" ? `<button class="btn bad petit" data-refuser="${f.id}">Refuser</button>` : ""}
+        <button class="btn clair petit" data-suppr="${f.id}">Retirer de la file</button>
+      </div>
+    </div>`).join("");
+
+  box.querySelectorAll("[data-valider]").forEach(b => b.addEventListener("click", () => decider(b.dataset.valider, "validee")));
+  box.querySelectorAll("[data-refuser]").forEach(b => b.addEventListener("click", () => decider(b.dataset.refuser, "refusee")));
+  box.querySelectorAll("[data-suppr]").forEach(b => b.addEventListener("click", () => {
+    soumis = soumis.filter(x => x.id !== b.dataset.suppr); ecri(CACHE_SOUMIS, soumis); majModeration(); listerMesEnvois();
+  }));
+}
+
+async function decider(id, etat){
+  const f = soumis.find(x => x.id === id);
+  if(!f) return;
+  if(etat === "refusee"){
+    const motif = prompt("Motif du refus (il sera transmis à l'auteur) :", "Déroulement trop court ou intention à préciser");
+    if(motif === null) return;
+    f.motif = motif || "Non conforme aux attentes du niveau";
+  } else { f.motif = ""; }
+  f.etat = etat;
+  f.moderePar = session.nom;
+  f.modereLe = new Date().toISOString();
+  ecri(CACHE_SOUMIS, soumis);
+
+  const rep = await appelServeur("/moderation/decision", {method:"POST", body: JSON.stringify({id, etat, motif: f.motif, moderateur: session.nom})});
+
+  if(etat === "validee" && !moderees.some(m => m.id === f.id)){
+    moderees.push({id:f.id, niveau:f.niveau, titre:f.titre, duree:f.duree, intention:f.intention,
+      materiel:f.materiel, deroulement:f.deroulement, traces:f.traces, observation:f.observation, autrice:f.autrice});
+    ecri(CACHE_OK, moderees);
+  }
+  if(etat === "refusee") moderees = moderees.filter(m => m.id !== id), ecri(CACHE_OK, moderees);
+
+  dessinerBulles();
+  if(actif) rendreNiveau(NIVEAUX.find(n => n.id === actif));
+  majModeration(); listerMesEnvois();
+  if(rep === null && API){ /* serveur injoignable : la décision reste locale */ }
+}
+
+document.getElementById("mod-export").addEventListener("click", () => {
+  const doc = { genere: new Date().toISOString(), niveaux: NIVEAUX.map(n => ({id:n.id, court:n.court})),
+                activites: moderees.concat(soumis.filter(f => f.etat !== "refusee")).map(f => ({...f})) };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2)], {type:"application/json"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = "catalogue-planifications.json"; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("mod-import-json").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{
+      const doc = JSON.parse(fr.result);
+      const venues = (doc.activites || []).map(f => Object.assign({id: uid(), etat: f.etat || "validee",
+        autrice: f.autrice || "Catalogue importé", envoye: f.envoye || new Date().toISOString()}, f));
+      venues.forEach(f => {
+        if(f.etat === "validee"){
+          if(!moderees.some(m => m.id === f.id)) moderees.push(f);
+        } else {
+          if(!soumis.some(m => m.id === f.id)) soumis.unshift(f);
+        }
+      });
+      ecri(CACHE_OK, moderees); ecri(CACHE_SOUMIS, soumis);
+      dessinerBulles(); majModeration();
+      alert(venues.length + " fiche(s) importée(s).");
+    }catch(err){ alert("Fichier illisible : " + err.message); }
+  };
+  fr.readAsText(file);
+});
+
+/* --------------------------- démarrage --------------------------- */
+dessinerBulles();
+listerMesEnvois();
+majIdentite();
+majModeration();
+</script>
+</body>
+</html>
